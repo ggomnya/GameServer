@@ -53,9 +53,12 @@ void CPlayerSession::OnGame_Packet(CPacket* pPacket) {
 	}
 	*pPacket >> _SendTick;
 	CPacket* pSendPacket = CPacket::Alloc();
+	//pPacket->Clear();
 	*pSendPacket << (WORD)en_PACKET_CS_GAME_RES_ECHO << AccountNo << _SendTick;
-	//MPGameResEcho(pSendPacket, en_PACKET_CS_GAME_RES_ECHO, AccountNo, _SendTick);
+	//*pPacket << (WORD)en_PACKET_CS_GAME_RES_ECHO << AccountNo << _SendTick;
+	//MPGameResEcho(pPacket, en_PACKET_CS_GAME_RES_ECHO, AccountNo, _SendTick);
 	SendPacket(pSendPacket);
+	//SendPacket(pPacket);
 	pSendPacket->Free();
 }
 void CPlayerSession::OnGame_ClientRelease() {

@@ -32,7 +32,7 @@ public:
 	LONG64 _ReleaseFlag;
 
 
-	bool SendPacket(CPacket* pSendPacket, int type = NET);
+	bool SendPacket(CPacket* pSendPacket, int type = eNET);
 	bool Disconnect();
 	void ReleaseSession();
 	int Release();

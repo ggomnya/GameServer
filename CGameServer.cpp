@@ -25,6 +25,8 @@ unsigned int WINAPI CGameServer::WorkerThread(LPVOID lParam) {
 	stOVERLAPPED* Overlapped;
 	CPacket::stPACKET_HEADER stPacketHeader;
 	int iSessionUseSize = 0;
+	int iRecvTPS = 0;
+	WORD wPacketCount;
 	while (1) {
 		retval = GetQueuedCompletionStatus(_hcp, &cbTransferred, (PULONG_PTR)&pSession, (LPOVERLAPPED*)&Overlapped, INFINITE);
 		//if (retval == false) {
@@ -48,6 +50,7 @@ unsigned int WINAPI CGameServer::WorkerThread(LPVOID lParam) {
 		else {
 			//recv인 경우
 			if (Overlapped->Type == RECV) {
+				iRecvTPS = 0;
 				//데이터 받아서 SendQ에 넣은 후 Send하기
 				pSession->_RecvQ.MoveRear(cbTransferred);
 				while (1) {
@@ -85,16 +88,18 @@ unsigned int WINAPI CGameServer::WorkerThread(LPVOID lParam) {
 					}
 					//Decode된 Packet을 ComplateQ에 넣기
 					pSession->_ComplateQ.Enqueue(RecvPacket);
-					InterlockedIncrement(&_Monitor_RecvPacketTPS);
+					iRecvTPS++;
+					//InterlockedIncrement(&_Monitor_RecvPacketTPS);
 				}
-
+				InterlockedAdd(&_Monitor_RecvPacketTPS, iRecvTPS);
 				//Recv 요청하기
 				RecvPost(pSession);
 
 			}
 			//send 완료 경우
 			else if (Overlapped->Type == SEND) {
-				for (int i = 0; i < pSession->_PacketCount; i++) {
+				wPacketCount = pSession->_PacketCount;
+				for (int i = 0; i < wPacketCount; i++) {
 					pSession->_PacketArray[i]->Free();
 				}
 				pSession->_PacketCount = 0;
@@ -146,34 +151,35 @@ unsigned int WINAPI CGameServer::AuthThread(LPVOID lParam) {
 			int curIdx;
 			_IndexSession.Pop(&curIdx);
 			//있어선 안됨
-			if (_SessionList[curIdx]->_Mode != MODE_NONE)
+			pSession = _SessionList[curIdx];
+			if (pSession->_Mode != MODE_NONE)
 				CCrashDump::Crash();
-			_SessionList[curIdx]->_sock = pAcceptSocket->sock;
-			_SessionList[curIdx]->_clientaddr = pAcceptSocket->clientaddr;
-			_SessionList[curIdx]->_SessionID = ++_SessionIDCnt;
-			_SessionList[curIdx]->_SessionIndex = curIdx;
-			memset(&_SessionList[curIdx]->_RecvOverlapped, 0, sizeof(_SessionList[curIdx]->_RecvOverlapped));
-			memset(&_SessionList[curIdx]->_SendOverlapped, 0, sizeof(_SessionList[curIdx]->_SendOverlapped));
-			_SessionList[curIdx]->_RecvOverlapped.Type = RECV;
-			_SessionList[curIdx]->_SendOverlapped.Type = SEND;
-			_SessionList[curIdx]->_RecvOverlapped.SessionID = _SessionList[curIdx]->_SessionID;
-			_SessionList[curIdx]->_SendOverlapped.SessionID = _SessionList[curIdx]->_SessionID;
-			_SessionList[curIdx]->_IOCount = 1;
-			_SessionList[curIdx]->_RecvQ.ClearBuffer();
-			_SessionList[curIdx]->_SendQ.Clear();
-			_SessionList[curIdx]->_ComplateQ.Clear();
-			_SessionList[curIdx]->_ReleaseFlag = TRUE;
-			_SessionList[curIdx]->_SendFlag = TRUE;
-			_SessionList[curIdx]->_PacketCount = 0;
-			_SessionList[curIdx]->_bAuthToGameFlag = false;
+			pSession->_sock = pAcceptSocket->sock;
+			pSession->_clientaddr = pAcceptSocket->clientaddr;
+			pSession->_SessionID = ++_SessionIDCnt;
+			pSession->_SessionIndex = curIdx;
+			memset(&pSession->_RecvOverlapped, 0, sizeof(pSession->_RecvOverlapped));
+			memset(&pSession->_SendOverlapped, 0, sizeof(pSession->_SendOverlapped));
+			pSession->_RecvOverlapped.Type = RECV;
+			pSession->_SendOverlapped.Type = SEND;
+			pSession->_RecvOverlapped.SessionID = pSession->_SessionID;
+			pSession->_SendOverlapped.SessionID = pSession->_SessionID;
+			pSession->_IOCount = 1;
+			pSession->_RecvQ.ClearBuffer();
+			pSession->_SendQ.Clear();
+			pSession->_ComplateQ.Clear();
+			pSession->_ReleaseFlag = TRUE;
+			pSession->_SendFlag = TRUE;
+			pSession->_PacketCount = 0;
+			pSession->_bAuthToGameFlag = false;
 			InterlockedIncrement(&_Monitor_SessionAll);
-			CreateIoCompletionPort((HANDLE)_SessionList[curIdx]->_sock, _hcp, (ULONG_PTR)_SessionList[curIdx], 0);
-			_SessionList[curIdx]->_Mode = MODE_AUTH;
+			CreateIoCompletionPort((HANDLE)pSession->_sock, _hcp, (ULONG_PTR)pSession, 0);
+			pSession->_Mode = MODE_AUTH;
 			_Monitor_SessionAuth++;
-			_SessionList[curIdx]->OnAuth_ClientJoin();
-			RecvPost(_SessionList[curIdx]);
+			pSession->OnAuth_ClientJoin();
+			RecvPost(pSession);
 			_AcceptSocketPool.Free(pAcceptSocket);
-			_SessionList[curIdx]->ReleaseSession();
+			pSession->ReleaseSession();
 		}
 
 		//MODE_AUTH에 대한 Session 로직 처리
@@ -410,20 +416,13 @@ void CGameServer::SendPost(CGameSession* pSession) {
 	DWORD lpFlags = 0;
 	WSABUF sendbuf[dfPACKETNUM];
 	WORD i = 0;
-	/*while (pSession->_SendQ.Size() > 0) {
-		if (pSession->_PacketCount >= dfPACKETNUM)
-			break;
-		pSession->_SendQ.Dequeue(&(pSession->_PacketArray[pSession->_PacketCount]));
-		sendbuf[pSession->_PacketCount].buf = pSession->_PacketArray[pSession->_PacketCount]->GetHeaderPtr();
-		sendbuf[pSession->_PacketCount].len = pSession->_PacketArray[pSession->_PacketCount]->GetDataSize() + pSession->_PacketArray[pSession->_PacketCount]->GetHeaderSize();
-		pSession->_PacketCount++;
-	}*/
 	while (pSession->_SendQ.Size() > 0) {
 		if (i >= dfPACKETNUM)
 			break;
 		pSession->_SendQ.Dequeue(&(pSession->_PacketArray[i]));
 		sendbuf[i].buf = pSession->_PacketArray[i]->GetHeaderPtr();
 		sendbuf[i].len = pSession->_PacketArray[i]->GetDataSize() + pSession->_PacketArray[i]->GetHeaderSize();
+		//sendbuf[i].len = pSession->_PacketArray[i]->_iRear;
 		i++;
 	}
 	pSession->_PacketCount = i;

@@ -10,11 +10,11 @@ CGameSession::CGameSession() {
 
 bool CGameSession::SendPacket(CPacket* pSendPacket, int type) {
 	pSendPacket->AddRef();
-	if (type == NET){
+	if (type == eNET){
 		pSendPacket->SetHeader_5();
 		pSendPacket->Encode();
 	}
-	else if (type == LAN) {
+	else if (type == eLAN) {
 		pSendPacket->SetHeader_2();
 	}
 	_SendQ.Enqueue(pSendPacket);

@@ -9,8 +9,8 @@ USHORT ServerPort;
 DWORD ServerThreadNum;
 DWORD ServerIOCPNum;
 DWORD ServerMaxSession;
-
 int wmain() {
+	timeBeginPeriod(1);
 	CINIParse Parse;
 	Parse.LoadFile(L"GameServer_Config.ini");
 	Parse.GetValue(L"IP", ServerIP);
@@ -55,6 +55,6 @@ int wmain() {
 			if (cmd == L'q' || cmd == L'Q')
 				CCrashDump::Crash();
 		}
-		Sleep(10);
+		Sleep(50);
 	}
 }

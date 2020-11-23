@@ -7,7 +7,7 @@
 #include "PacketBuffer.h"
 
 enum { SEND, RECV, UPDATE, CONNECT };
-enum { LAN, NET };
+enum { eLAN, eNET };
 enum { ACCEPT, RECVCOM, SENDCOM, UPDATECOM, PQCS, RECVPOST, SENDPOST, DIS, RELEASE, GQCS};
 enum {LANHEADER = 2, NETHEADER = 5};
 
