@@ -7,7 +7,7 @@
 
 extern INT64 PacketNum;
 
-#define dfMAX_PACKET_BUFFER_SIZE	1000
+#define dfMAX_PACKET_BUFFER_SIZE	200
 #define dfPACKET_CODE		0x77
 #define dfPACKET_KEY		0x32
 
@@ -73,7 +73,7 @@ public:
 	};
 	friend EX;
 	enum en_PACKET {
-		eBUFFER_DEFAULT = 1000
+		eBUFFER_DEFAULT = 200
 	};
 
 private: CPacket();

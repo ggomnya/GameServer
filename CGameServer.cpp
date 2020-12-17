@@ -122,7 +122,7 @@ unsigned int WINAPI CGameServer::AcceptThread(LPVOID lParam) {
 			return 0;
 		}
 		_Monitor_AcceptTotal++;
-		_Monitor_AcceptTPS;
+		_Monitor_AcceptTPS++;
 		//빈 세션이 없을 경우 연결 끊기
 		if (_IndexSession.Size() == 0) {
 			wprintf(L"accept()_MaxSession\n");

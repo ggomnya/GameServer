@@ -5,7 +5,7 @@
 #include "Lockfree_ObjectPool.h"
 #include "LockfreeQueue.h"
 #include "PacketBuffer.h"
-
+enum { LOGIN = 1, GAME, CHAT, MONITOR };
 enum { SEND, RECV, UPDATE, CONNECT };
 enum { eLAN, eNET };
 enum { ACCEPT, RECVCOM, SENDCOM, UPDATECOM, PQCS, RECVPOST, SENDPOST, DIS, RELEASE, GQCS};
@@ -61,7 +61,7 @@ struct stSESSION {
 	CPacket* PacketArray[200];
 	int PacketCount;
 	//여기부턴 debug용
-	int iSendbyte;
+	/*int iSendbyte;
 	DWORD iRecvbyte;
 	DWORD sendComtime;
 	DWORD recvComtime;
@@ -91,7 +91,7 @@ struct stSESSION {
 	DWORD recvErr;
 	DWORD recvLen[2];
 	DWORD debugCnt;
-	stDEBUG debug[DEBUGNUM];
+	stDEBUG debug[DEBUGNUM];*/
 	__declspec(align(64))
 		LONG64 IOCount;
 	LONG64 ReleaseFlag;
